@@ -1,0 +1,38 @@
+# .github/workflows/mirror-latest-fzf.yml
+
+name: Mirror latest fzf release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get latest release tag from upstream
+        id: get-latest
+        run: |
+          latest_tag=$(gh release view -R romkatv/zsh-bin --json tagName -q .tagName)
+          echo "Latest tag: $latest_tag"
+          echo "tag=$latest_tag" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download all assets from upstream
+        run: |
+          mkdir -p zsh-bin-assets
+          cd zsh-bin-assets
+          gh release download "${{ steps.get-latest.outputs.tag }}" \
+            -R romkatv/zsh-bin
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Mirror release in this repo
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get-latest.outputs.tag }}
+          name: ${{ steps.get-latest.outputs.tag }}
+          files: zsh-bin-assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
